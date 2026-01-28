@@ -131,12 +131,12 @@ To interpret results, we compare against known reference points:
 - [x] Implement game end detection and final scoring
 - [x] Unit tests for all game mechanics (133 tests passing)
 
-### Phase 2: Probability Calculator
-- [ ] Calculate remaining dice probabilities
-- [ ] Enumerate all possible leg outcomes
-- [ ] Calculate camel position probabilities
-- [ ] Calculate expected value for each betting ticket
-- [ ] Optimize for performance (memoization, pruning)
+### Phase 2: Probability Calculator [COMPLETE]
+- [x] Calculate remaining dice probabilities
+- [x] Enumerate all possible leg outcomes
+- [x] Calculate camel position probabilities
+- [x] Calculate expected value for each betting ticket
+- [x] Performance: 5 racing dice in 0.45s, with grey die ~29s
 
 ### Phase 3: Agent Implementation
 - [ ] Implement base Agent interface
@@ -192,8 +192,8 @@ camelup/
 │   │   └── game.py           # Main game loop
 │   ├── probability/
 │   │   ├── __init__.py
-│   │   ├── calculator.py     # Probability calculations
-│   │   └── ev.py             # Expected value calculations
+│   │   ├── calculator.py     # Exact probability enumeration (29K-1M outcomes)
+│   │   └── ev.py             # Expected value calculations for betting
 │   ├── agents/
 │   │   ├── __init__.py
 │   │   ├── base.py           # Base agent interface
@@ -215,7 +215,7 @@ camelup/
 │   ├── test_spectator.py      # 15 tests - spectator tile mechanics
 │   ├── test_movement.py       # 20 tests - movement and board integration
 │   ├── test_game_flow.py      # 19 tests - turns, legs, game end
-│   ├── test_probability.py    # (Phase 2)
+│   ├── test_probability.py    # 17 tests - probability and EV calculations
 │   └── test_agents.py         # (Phase 3)
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
@@ -273,7 +273,7 @@ camelup/
 | Phase | Description | Status |
 |-------|-------------|--------|
 | Phase 1 | Core Game Engine | Complete (133 tests) |
-| Phase 2 | Probability Calculator | Not Started |
+| Phase 2 | Probability Calculator | Complete (17 tests) |
 | Phase 3 | Agent Implementation | Not Started |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
