@@ -132,11 +132,13 @@ To interpret results, we compare against known reference points:
 - [x] Unit tests for all game mechanics (133 tests passing)
 
 ### Phase 2: Probability Calculator [COMPLETE]
-- [x] Calculate remaining dice probabilities
-- [x] Enumerate all possible leg outcomes
-- [x] Calculate camel position probabilities
-- [x] Calculate expected value for each betting ticket
+- [x] Enumerate all possible leg outcomes (this IS the probability calculation)
+- [x] Calculate camel ranking probabilities: P(camel finishes 1st/2nd/etc)
+- [x] Calculate EV for leg betting tickets
+- [x] Calculate EV for pyramid ticket (+1 coin guaranteed)
 - [x] Performance: 5 racing dice in 0.45s, with grey die ~29s
+- [ ] TODO: Calculate EV for spectator tile placement (not yet implemented)
+- [ ] TODO: Calculate EV for overall winner/loser bets (needs end-game probability)
 
 ### Phase 3: Agent Implementation
 - [ ] Implement base Agent interface
