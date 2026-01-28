@@ -9,7 +9,10 @@ from typing import Dict, List, Tuple
 
 from ..game.camel import CamelColor, RACING_CAMELS
 from ..game.betting import TICKET_VALUES, OVERALL_PAYOUTS
-from .calculator import RankingProbabilities
+from .calculator import (
+    RankingProbabilities, SpaceLandingProbabilities,
+    OverallRaceProbabilities, FullProbabilities
+)
 
 
 @dataclass(frozen=True)
@@ -106,14 +109,14 @@ def calculate_overall_bet_ev(
 ) -> float:
     """
     Calculate EV for an overall winner/loser bet.
-    
+
     Args:
         prob_correct: Probability the bet is correct
         position_in_queue: How many correct bets are already placed (0 = first)
-    
+
     Returns:
         Expected value
-    
+
     Payouts for correct: 8, 5, 3, 2, 1, 1, 1, 1 (by position)
     Payout for incorrect: -1
     """
@@ -121,9 +124,88 @@ def calculate_overall_bet_ev(
         payout_if_correct = 1  # Beyond the list, assume +1
     else:
         payout_if_correct = OVERALL_PAYOUTS[position_in_queue]
-    
+
     ev = (prob_correct * payout_if_correct) + ((1 - prob_correct) * -1)
     return ev
+
+
+def calculate_spectator_tile_ev(
+    space_probs: SpaceLandingProbabilities,
+    space: int
+) -> float:
+    """
+    Calculate EV for placing a spectator tile on a space.
+
+    Payout: 1 coin each time any camel lands on the space.
+
+    Args:
+        space_probs: Probability distribution for space landings
+        space: The space to place the tile on
+
+    Returns:
+        Expected value (expected number of coins from landings)
+    """
+    return space_probs.prob_landing(space) * 1.0
+
+
+def calculate_all_spectator_tile_evs(
+    space_probs: SpaceLandingProbabilities,
+    valid_spaces: List[int]
+) -> Dict[int, float]:
+    """
+    Calculate EV for all valid spectator tile placements.
+
+    Args:
+        space_probs: Probability distribution for space landings
+        valid_spaces: List of spaces where tile can be placed
+
+    Returns:
+        Map of space -> EV
+    """
+    return {
+        space: calculate_spectator_tile_ev(space_probs, space)
+        for space in valid_spaces
+    }
+
+
+def calculate_overall_winner_bet_ev(
+    overall_probs: OverallRaceProbabilities,
+    camel: CamelColor,
+    position_in_queue: int
+) -> float:
+    """
+    Calculate EV for betting on a camel to win the race.
+
+    Args:
+        overall_probs: Probability distribution for race outcomes
+        camel: Camel to bet on
+        position_in_queue: How many winner bets are already placed (0 = first)
+
+    Returns:
+        Expected value
+    """
+    prob_wins = overall_probs.prob_wins_race(camel)
+    return calculate_overall_bet_ev(prob_wins, position_in_queue)
+
+
+def calculate_overall_loser_bet_ev(
+    overall_probs: OverallRaceProbabilities,
+    camel: CamelColor,
+    position_in_queue: int
+) -> float:
+    """
+    Calculate EV for betting on a camel to lose the race.
+
+    Args:
+        overall_probs: Probability distribution for race outcomes
+        camel: Camel to bet on
+        position_in_queue: How many loser bets are already placed (0 = first)
+
+    Returns:
+        Expected value
+    """
+    prob_loses = overall_probs.prob_loses_race(camel)
+    return calculate_overall_bet_ev(prob_loses, position_in_queue)
 
 
 def calculate_betting_evs(
@@ -155,16 +237,16 @@ def rank_actions_by_ev(
 ) -> List[ActionEV]:
     """
     Rank all available betting actions by expected value.
-    
+
     Args:
         probs: Current ranking probabilities
         available_tickets: Available leg betting tickets
-    
+
     Returns:
         List of ActionEV sorted by EV (highest first)
     """
     actions = []
-    
+
     # Leg betting tickets
     for camel in RACING_CAMELS:
         tickets = available_tickets.get(camel, ())
@@ -175,13 +257,89 @@ def rank_actions_by_ev(
                 action_description=f"Bet on {camel.value} (ticket value {top_value})",
                 expected_value=ev
             ))
-    
+
     # Pyramid ticket
     actions.append(ActionEV(
         action_description="Take pyramid ticket",
         expected_value=1.0
     ))
-    
+
+    # Sort by EV descending
+    actions.sort(key=lambda a: a.expected_value, reverse=True)
+    return actions
+
+
+def rank_all_actions_by_ev(
+    full_probs: FullProbabilities,
+    available_tickets: Dict[CamelColor, Tuple[int, ...]],
+    valid_spectator_spaces: List[int],
+    available_finish_cards: List[CamelColor],
+    num_winner_bets_placed: int = 0,
+    num_loser_bets_placed: int = 0
+) -> List[ActionEV]:
+    """
+    Rank ALL available actions by expected value.
+
+    Includes leg bets, pyramid ticket, spectator tiles, and overall bets.
+
+    Args:
+        full_probs: Complete probability analysis
+        available_tickets: Available leg betting tickets
+        valid_spectator_spaces: Spaces where spectator tile can be placed
+        available_finish_cards: Camels player can still bet on for overall
+        num_winner_bets_placed: How many winner bets already in queue
+        num_loser_bets_placed: How many loser bets already in queue
+
+    Returns:
+        List of ActionEV sorted by EV (highest first)
+    """
+    actions = []
+
+    # Leg betting tickets
+    for camel in RACING_CAMELS:
+        tickets = available_tickets.get(camel, ())
+        if tickets:
+            top_value = tickets[0]
+            ev = calculate_leg_ticket_ev(full_probs.ranking, camel, top_value)
+            actions.append(ActionEV(
+                action_description=f"Leg bet: {camel.value} (value {top_value})",
+                expected_value=ev
+            ))
+
+    # Pyramid ticket
+    actions.append(ActionEV(
+        action_description="Pyramid ticket (+1 coin)",
+        expected_value=1.0
+    ))
+
+    # Spectator tiles
+    for space in valid_spectator_spaces:
+        ev = calculate_spectator_tile_ev(full_probs.space_landings, space)
+        actions.append(ActionEV(
+            action_description=f"Spectator tile: space {space}",
+            expected_value=ev
+        ))
+
+    # Overall winner bets
+    for camel in available_finish_cards:
+        ev = calculate_overall_winner_bet_ev(
+            full_probs.overall_race, camel, num_winner_bets_placed
+        )
+        actions.append(ActionEV(
+            action_description=f"Overall winner: {camel.value}",
+            expected_value=ev
+        ))
+
+    # Overall loser bets
+    for camel in available_finish_cards:
+        ev = calculate_overall_loser_bet_ev(
+            full_probs.overall_race, camel, num_loser_bets_placed
+        )
+        actions.append(ActionEV(
+            action_description=f"Overall loser: {camel.value}",
+            expected_value=ev
+        ))
+
     # Sort by EV descending
     actions.sort(key=lambda a: a.expected_value, reverse=True)
     return actions

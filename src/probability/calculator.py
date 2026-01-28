@@ -21,14 +21,51 @@ DICE_VALUES = (1, 2, 3)
 class LegOutcome:
     """Result of simulating a leg to completion."""
     ranking: Tuple[CamelColor, ...]  # 1st place to last place
-    
+    spaces_landed: Tuple[int, ...]  # Spaces where camels landed during leg
+    game_finished: bool = False  # Whether a camel crossed finish line
+
     @property
     def first(self) -> CamelColor:
         return self.ranking[0]
-    
+
     @property
     def second(self) -> CamelColor:
         return self.ranking[1] if len(self.ranking) > 1 else None
+
+
+@dataclass(frozen=True)
+class SpaceLandingProbabilities:
+    """Probability that any camel lands on each space during the leg."""
+    # space_probs[space] = probability any camel lands there
+    space_probs: Dict[int, float]
+
+    def prob_landing(self, space: int) -> float:
+        """Probability that any camel lands on this space."""
+        return self.space_probs.get(space, 0.0)
+
+    def expected_spectator_payout(self, space: int) -> float:
+        """Expected payout (coins) for placing spectator tile on this space."""
+        # Payout is 1 coin each time a camel lands
+        return self.prob_landing(space) * 1.0
+
+
+@dataclass(frozen=True)
+class OverallRaceProbabilities:
+    """Probability each camel wins/loses the entire race."""
+    # win_probs[camel] = P(camel finishes 1st when game ends)
+    win_probs: Dict[CamelColor, float]
+    # lose_probs[camel] = P(camel finishes last when game ends)
+    lose_probs: Dict[CamelColor, float]
+    # P(game ends this leg)
+    prob_game_ends: float
+
+    def prob_wins_race(self, camel: CamelColor) -> float:
+        """Probability camel wins the entire race."""
+        return self.win_probs.get(camel, 0.0)
+
+    def prob_loses_race(self, camel: CamelColor) -> float:
+        """Probability camel loses the entire race (finishes last)."""
+        return self.lose_probs.get(camel, 0.0)
 
 
 @dataclass(frozen=True)
@@ -181,38 +218,59 @@ def simulate_sequence_with_grey(
 ) -> LegOutcome:
     """
     Simulate a sequence including grey die at a specific position.
-    
+
     Args:
         board: Current board state
         racing_sequence: Sequence of racing die rolls
         grey_outcome: (crazy_camel, value) for grey die, or None if not rolled
         grey_position: Position in sequence where grey die is rolled (0 to len)
-    
+
     Returns:
-        LegOutcome with final ranking
+        LegOutcome with final ranking, spaces landed, and game finish status
     """
     current_board = board
     racing_idx = 0
-    
+    spaces_landed = []
+    game_finished = False
+
     total_dice = len(racing_sequence) + (1 if grey_outcome else 0)
-    
+
     for i in range(total_dice):
         if grey_outcome and i == grey_position:
             # Roll grey die
             grey_camel_shown, value = grey_outcome
             # Apply crazy camel rules to determine which one actually moves
             actual_camel = current_board.camel_positions.get_crazy_camel_to_move(grey_camel_shown)
+            old_space = current_board.camel_positions.get_camel_space(actual_camel)
             current_board, _ = current_board.move_camel(actual_camel, -value)
+            new_space = current_board.camel_positions.get_camel_space(actual_camel)
+            # Track landing space (for spectator tile calculation)
+            if new_space != old_space:
+                spaces_landed.append(new_space)
         else:
             # Roll racing die
             if racing_idx < len(racing_sequence):
                 die_color, value = racing_sequence[racing_idx]
                 camel = CamelColor[die_color.name]
+                old_space = current_board.camel_positions.get_camel_space(camel)
                 current_board, _ = current_board.move_camel(camel, value)
+                new_space = current_board.camel_positions.get_camel_space(camel)
+                # Track landing space
+                if new_space is not None and (old_space is None or new_space != old_space):
+                    spaces_landed.append(new_space)
                 racing_idx += 1
-    
+
+        # Check if game finished (any racing camel crossed finish line)
+        if current_board.is_game_over():
+            game_finished = True
+            break
+
     ranking = tuple(current_board.get_ranking())
-    return LegOutcome(ranking=ranking)
+    return LegOutcome(
+        ranking=ranking,
+        spaces_landed=tuple(spaces_landed),
+        game_finished=game_finished
+    )
 
 
 def calculate_ranking_probabilities(
@@ -288,26 +346,155 @@ def calculate_ranking_probabilities(
 def calculate_probabilities_from_game_state(board: Board, grey_rolled: bool) -> RankingProbabilities:
     """
     Calculate ranking probabilities from current game state.
-    
+
     This is a convenience function that extracts the necessary info
     from the board state.
-    
+
     Args:
         board: Current board state
         grey_rolled: Whether grey die has been rolled this leg
-    
+
     Returns:
         RankingProbabilities
     """
     # Determine which racing dice have been rolled by checking camel positions
     # Actually, we need pyramid state for this - this function needs more info
     # For now, assume all racing dice are available (start of leg)
-    
+
     all_racing_dice = [DieColor.BLUE, DieColor.GREEN, DieColor.YELLOW,
                        DieColor.RED, DieColor.PURPLE]
-    
+
     return calculate_ranking_probabilities(
         board=board,
         remaining_racing_dice=all_racing_dice,
         grey_die_available=not grey_rolled
+    )
+
+
+@dataclass(frozen=True)
+class FullProbabilities:
+    """Complete probability analysis for current game state."""
+    ranking: RankingProbabilities
+    space_landings: SpaceLandingProbabilities
+    overall_race: OverallRaceProbabilities
+
+
+def calculate_all_probabilities(
+    board: Board,
+    remaining_racing_dice: List[DieColor],
+    grey_die_available: bool
+) -> FullProbabilities:
+    """
+    Calculate all probabilities: rankings, space landings, and overall race.
+
+    Args:
+        board: Current board state
+        remaining_racing_dice: Racing dice still in pyramid
+        grey_die_available: Whether grey die hasn't been rolled yet
+
+    Returns:
+        FullProbabilities with all calculated values
+    """
+    # Count occurrences
+    ranking_counts: Dict[CamelColor, List[int]] = {
+        camel: [0] * 5 for camel in RACING_CAMELS
+    }
+    space_landing_counts: Dict[int, int] = defaultdict(int)
+    win_counts: Dict[CamelColor, int] = {camel: 0 for camel in RACING_CAMELS}
+    lose_counts: Dict[CamelColor, int] = {camel: 0 for camel in RACING_CAMELS}
+    game_ends_count = 0
+    total_outcomes = 0
+
+    # Generate all racing die sequences
+    racing_sequences = enumerate_dice_sequences(remaining_racing_dice)
+
+    if grey_die_available:
+        grey_outcomes = enumerate_grey_die_outcomes()
+        num_total_dice = len(remaining_racing_dice) + 1
+
+        for racing_seq in racing_sequences:
+            for grey_outcome in grey_outcomes:
+                for grey_pos in range(num_total_dice):
+                    outcome = simulate_sequence_with_grey(
+                        board, racing_seq, grey_outcome, grey_pos
+                    )
+
+                    # Record ranking
+                    for pos, camel in enumerate(outcome.ranking):
+                        if camel in ranking_counts:
+                            ranking_counts[camel][pos] += 1
+
+                    # Record space landings
+                    for space in outcome.spaces_landed:
+                        space_landing_counts[space] += 1
+
+                    # Record game end outcomes
+                    if outcome.game_finished:
+                        game_ends_count += 1
+                        if outcome.ranking:
+                            winner = outcome.ranking[0]
+                            loser = outcome.ranking[-1]
+                            if winner in win_counts:
+                                win_counts[winner] += 1
+                            if loser in lose_counts:
+                                lose_counts[loser] += 1
+
+                    total_outcomes += 1
+    else:
+        for racing_seq in racing_sequences:
+            outcome = simulate_sequence_with_grey(board, racing_seq, None, None)
+
+            for pos, camel in enumerate(outcome.ranking):
+                if camel in ranking_counts:
+                    ranking_counts[camel][pos] += 1
+
+            for space in outcome.spaces_landed:
+                space_landing_counts[space] += 1
+
+            if outcome.game_finished:
+                game_ends_count += 1
+                if outcome.ranking:
+                    winner = outcome.ranking[0]
+                    loser = outcome.ranking[-1]
+                    if winner in win_counts:
+                        win_counts[winner] += 1
+                    if loser in lose_counts:
+                        lose_counts[loser] += 1
+
+            total_outcomes += 1
+
+    # Convert counts to probabilities
+    if total_outcomes > 0:
+        ranking_probs = {
+            camel: tuple(count / total_outcomes for count in counts)
+            for camel, counts in ranking_counts.items()
+        }
+        space_probs = {
+            space: count / total_outcomes
+            for space, count in space_landing_counts.items()
+        }
+        prob_game_ends = game_ends_count / total_outcomes
+
+        if game_ends_count > 0:
+            win_probs = {camel: count / game_ends_count for camel, count in win_counts.items()}
+            lose_probs = {camel: count / game_ends_count for camel, count in lose_counts.items()}
+        else:
+            # Game doesn't end this leg - use leg ranking as estimate
+            win_probs = {camel: ranking_probs[camel][0] for camel in RACING_CAMELS}
+            lose_probs = {camel: ranking_probs[camel][4] for camel in RACING_CAMELS}
+    else:
+        ranking_probs = {camel: (0.0,) * 5 for camel in RACING_CAMELS}
+        space_probs = {}
+        win_probs = {camel: 0.0 for camel in RACING_CAMELS}
+        lose_probs = {camel: 0.0 for camel in RACING_CAMELS}
+        prob_game_ends = 0.0
+
+    return FullProbabilities(
+        ranking=RankingProbabilities(probabilities=ranking_probs),
+        space_landings=SpaceLandingProbabilities(space_probs=space_probs),
+        overall_race=OverallRaceProbabilities(
+            win_probs=win_probs,
+            lose_probs=lose_probs,
+            prob_game_ends=prob_game_ends
+        )
     )

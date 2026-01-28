@@ -137,8 +137,8 @@ To interpret results, we compare against known reference points:
 - [x] Calculate EV for leg betting tickets
 - [x] Calculate EV for pyramid ticket (+1 coin guaranteed)
 - [x] Performance: 5 racing dice in 0.45s, with grey die ~29s
-- [ ] TODO: Calculate EV for spectator tile placement (not yet implemented)
-- [ ] TODO: Calculate EV for overall winner/loser bets (needs end-game probability)
+- [x] Calculate EV for spectator tile placement
+- [x] Calculate EV for overall winner/loser bets
 
 ### Phase 3: Agent Implementation
 - [ ] Implement base Agent interface
@@ -217,7 +217,7 @@ camelup/
 │   ├── test_spectator.py      # 15 tests - spectator tile mechanics
 │   ├── test_movement.py       # 20 tests - movement and board integration
 │   ├── test_game_flow.py      # 19 tests - turns, legs, game end
-│   ├── test_probability.py    # 17 tests - probability and EV calculations
+│   ├── test_probability.py    # 25 tests - probability and EV calculations
 │   └── test_agents.py         # (Phase 3)
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
@@ -275,7 +275,7 @@ camelup/
 | Phase | Description | Status |
 |-------|-------------|--------|
 | Phase 1 | Core Game Engine | Complete (133 tests) |
-| Phase 2 | Probability Calculator | Complete (17 tests) |
+| Phase 2 | Probability Calculator | Complete (25 tests) |
 | Phase 3 | Agent Implementation | Not Started |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
