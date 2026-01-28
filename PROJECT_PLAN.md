@@ -37,7 +37,7 @@ To interpret results, we compare against known reference points:
 ### Components
 - **5 Racing Camels**: Blue, Green, Yellow, Red, Purple (move clockwise)
 - **2 Crazy Camels**: Black, White (move counter-clockwise, carry camels backwards)
-- **5 Racing Dice**: Each shows 1, 2, 2, 3, 3 (not uniform distribution)
+- **5 Racing Dice**: Each shows 1, 1, 2, 2, 3, 3 (6 faces, each value has 1/3 probability)
 - **1 Grey Die**: Controls crazy camels (1, 2, 3 in white; 1, 2, 3 in black)
 - **16 Spaces**: Racing track with finish line
 
@@ -121,15 +121,15 @@ To interpret results, we compare against known reference points:
 
 ## Implementation Plan
 
-### Phase 1: Core Game Engine
-- [ ] Implement game board and track representation
-- [ ] Implement camel and stack mechanics
-- [ ] Implement dice and pyramid mechanics
-- [ ] Implement betting ticket system
-- [ ] Implement spectator tile mechanics
-- [ ] Implement leg scoring
-- [ ] Implement game end detection and final scoring
-- [ ] Unit tests for all game mechanics
+### Phase 1: Core Game Engine [COMPLETE]
+- [x] Implement game board and track representation
+- [x] Implement camel and stack mechanics
+- [x] Implement dice and pyramid mechanics
+- [x] Implement betting ticket system
+- [x] Implement spectator tile mechanics
+- [x] Implement leg scoring
+- [x] Implement game end detection and final scoring
+- [x] Unit tests for all game mechanics (133 tests passing)
 
 ### Phase 2: Probability Calculator
 - [ ] Calculate remaining dice probabilities
@@ -208,12 +208,15 @@ camelup/
 │       └── analysis.py       # Results analysis
 ├── tests/
 │   ├── __init__.py
-│   ├── test_board.py
-│   ├── test_camel.py
-│   ├── test_dice.py
-│   ├── test_betting.py
-│   ├── test_probability.py
-│   └── test_agents.py
+│   ├── test_dice.py           # 12 tests - dice and pyramid mechanics
+│   ├── test_camel.py          # 28 tests - camel and stack mechanics
+│   ├── test_game.py           # 9 tests - game state and actions
+│   ├── test_betting.py        # 30 tests - betting tickets and scoring
+│   ├── test_spectator.py      # 15 tests - spectator tile mechanics
+│   ├── test_movement.py       # 20 tests - movement and board integration
+│   ├── test_game_flow.py      # 19 tests - turns, legs, game end
+│   ├── test_probability.py    # (Phase 2)
+│   └── test_agents.py         # (Phase 3)
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
 └── results/
@@ -269,7 +272,7 @@ camelup/
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 1 | Core Game Engine | Not Started |
+| Phase 1 | Core Game Engine | Complete (133 tests) |
 | Phase 2 | Probability Calculator | Not Started |
 | Phase 3 | Agent Implementation | Not Started |
 | Phase 4 | Simulation Framework | Not Started |
