@@ -44,10 +44,7 @@ htmlcov/
 .nox/
 
 # Results and data
-results/*.csv
-results/*.json
-results/*.pkl
-!results/.gitkeep
+results/
 
 # OS
 .DS_Store
