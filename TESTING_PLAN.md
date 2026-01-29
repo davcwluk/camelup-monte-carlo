@@ -2,7 +2,7 @@
 
 This document maps each rule from the Camel Up rulebook to specific test cases to verify the code implementation is correct.
 
-**Last Updated:** 206 tests across 11 test files (Phases 1-3 + pre-Phase 4 validation + game logger)
+**Last Updated:** 239 tests across 12 test files (Phases 1-4 + pre-Phase 4 validation + game logger)
 
 ---
 
@@ -253,6 +253,9 @@ All rules from the rulebook have been implemented and tested.
 ### Game Logger
 - `tests/test_game_logger.py` - 13 tests (renderer + integration)
 
+### Simulation Framework (Phase 4)
+- `tests/test_simulation.py` - 33 tests (results, CSV, runner, analysis, end-to-end)
+
 **Note:** `tests/test_agents.py` has 1 additional test marked slow (full-mode greedy parallel benchmark). Total slow tests: 3.
 
-**Total: 206 tests**
+**Total: 239 tests**

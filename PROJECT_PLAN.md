@@ -153,13 +153,16 @@ To interpret results, we compare against known reference points:
 - [x] PyPy + pytest-xdist parallel test execution setup (~18x speedup over CPython single-core)
 - [x] Human-readable game logger for debugging (GameLogger, renderers, play_game integration)
 
-### Phase 4: Simulation Framework
-- [ ] Game loop with multiple agents
-- [ ] Batch simulation runner
-- [ ] Results logging and storage
-- [ ] Progress tracking for long runs
-- [ ] Alternating start player (Game i: Agent A first; Game i+1: Agent B first)
-- [ ] Track first-player win rate as separate bias metric
+### Phase 4: Simulation Framework [COMPLETE]
+- [x] SimulationRunner with serial and parallel execution (multiprocessing)
+- [x] Agent registry, GameConfig, module-level worker for pickling
+- [x] GameResult/MatchupResult frozen dataclasses with CSV I/O
+- [x] Analysis module: win rate, CI, t-test, CV, summary_text (stdlib only)
+- [x] Alternating start player (even game_index: A first; odd: B first)
+- [x] First-player win rate as separate bias metric
+- [x] Progress tracking with flush for background runs
+- [x] Production results: 7 matchups x 1,000 games (fast_mode=True)
+- [x] Simulation guide document (SIMULATION_GUIDE.md)
 
 ### Phase 5: Analysis and Visualization
 - [ ] Win rate calculations and confidence intervals
@@ -240,8 +243,9 @@ camelup/
 │   │   └── game_logger.py    # Per-game human-readable logger
 │   └── simulation/
 │       ├── __init__.py
-│       ├── runner.py         # Simulation runner
-│       └── analysis.py       # Results analysis
+│       ├── results.py        # GameResult, MatchupResult, CSV I/O
+│       ├── runner.py         # SimulationRunner, agent registry, worker
+│       └── analysis.py       # Win rate, CI, t-test, CV, summary
 ├── tests/
 │   ├── __init__.py
 │   ├── test_dice.py           # 12 tests - dice and pyramid mechanics
@@ -254,7 +258,8 @@ camelup/
 │   ├── test_probability.py    # 25 tests - probability and EV calculations
 │   ├── test_agents.py         # 23 tests - agent implementations (1 marked slow)
 │   ├── test_probability_validation.py  # 10 tests - Monte Carlo validation (2 marked slow)
-│   └── test_game_logger.py    # 13 tests - renderer + logger integration
+│   ├── test_game_logger.py    # 13 tests - renderer + logger integration
+│   └── test_simulation.py     # 33 tests - simulation framework
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
 └── results/
@@ -273,12 +278,15 @@ camelup/
 | Track length | 16 spaces (standard) | Per rulebook |
 
 ### Matchups to Run
-1. RandomAgent vs RandomAgent (baseline variance)
-2. OptimalAgent vs RandomAgent (skill test - primary)
-3. GreedyAgent vs RandomAgent (simple EV test)
-4. HeuristicAgent vs RandomAgent (human-like test)
-5. OptimalAgent vs OptimalAgent (optimal equilibrium)
-6. OptimalAgent vs GreedyAgent (strategy comparison)
+1. RandomAgent vs RandomAgent (baseline variance) [DONE]
+2. GreedyAgent vs RandomAgent (primary skill test) [DONE]
+3. HeuristicAgent vs RandomAgent (human-like test) [DONE]
+4. ConservativeAgent vs RandomAgent (risk-averse test) [DONE]
+5. GreedyAgent vs HeuristicAgent (strategy comparison) [DONE]
+6. GreedyAgent vs ConservativeAgent (strategy comparison) [DONE]
+7. GreedyAgent vs GreedyAgent (skill equilibrium) [DONE]
+
+Note: OptimalAgent was deferred -- GreedyAgent serves as the EV-optimal agent.
 
 ---
 
@@ -314,10 +322,10 @@ camelup/
 | Phase 2 | Probability Calculator | Complete (25 tests) |
 | Phase 3 | Agent Implementation | Complete (23 tests) |
 | Pre-Phase 4 | Validation and Performance | Complete (8 tests) |
-| Phase 4 | Simulation Framework | Not Started |
+| Phase 4 | Simulation Framework | Complete (33 tests, 7 matchups run) |
 | Phase 5 | Analysis and Visualization | Not Started |
 
-**Total: 206 tests (3 marked slow)**
+**Total: 239 tests (3 marked slow)**
 
 ---
 
