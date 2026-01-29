@@ -153,6 +153,8 @@ To interpret results, we compare against known reference points:
 - [ ] Batch simulation runner
 - [ ] Results logging and storage
 - [ ] Progress tracking for long runs
+- [ ] Alternating start player (Game i: Agent A first; Game i+1: Agent B first)
+- [ ] Track first-player win rate as separate bias metric
 
 ### Phase 5: Analysis and Visualization
 - [ ] Win rate calculations and confidence intervals
@@ -161,6 +163,11 @@ To interpret results, we compare against known reference points:
 - [ ] EV accuracy scatter plots
 - [ ] Statistical significance tests
 - [ ] Comparison charts against reference games
+- [ ] Rename "OptimalAgent" to "ProbabilisticAgent" in analysis output
+- [ ] Track Sharpe Ratio equivalent metric (Mean Excess Return / Std Dev)
+- [ ] Parameter sensitivity analysis for HeuristicAgent thresholds
+- [ ] Implement GameAwareGreedyAgent (score differential utility)
+- [ ] Multi-player scaling experiments (4, 6 players) for Skill Decay Curve
 
 ---
 
