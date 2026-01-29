@@ -18,7 +18,7 @@ MATCHUPS = [
 
 NUM_GAMES = 1000
 BASE_SEED = 0
-FAST_MODE = False
+FAST_MODE = True
 NUM_WORKERS = cpu_count()
 OUTPUT_DIR = "results"
 
@@ -37,7 +37,7 @@ def main():
             base_seed=BASE_SEED,
             fast_mode=FAST_MODE,
             num_workers=NUM_WORKERS,
-            progress_interval=100,
+            progress_interval=10,
         )
         result = runner.run()
 

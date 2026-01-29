@@ -136,7 +136,7 @@ class SimulationRunner:
         for i, config in enumerate(configs):
             results.append(_run_single_game(config))
             if (i + 1) % self.progress_interval == 0:
-                print(f"Progress: {i + 1}/{self.num_games} games complete")
+                print(f"Progress: {i + 1}/{self.num_games} games complete", flush=True)
         return results
 
     def _run_parallel(self, configs: List[GameConfig]) -> List[GameResult]:
@@ -145,5 +145,5 @@ class SimulationRunner:
             for i, result in enumerate(pool.imap_unordered(_run_single_game, configs)):
                 results.append(result)
                 if (i + 1) % self.progress_interval == 0:
-                    print(f"Progress: {i + 1}/{self.num_games} games complete")
+                    print(f"Progress: {i + 1}/{self.num_games} games complete", flush=True)
         return results

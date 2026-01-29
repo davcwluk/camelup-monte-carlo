@@ -704,3 +704,48 @@ game_index,seed,score_0,score_1,winner,num_legs,num_turns,agent_seat_0,agent_sea
 If the header differs, the `load_results_csv` function will fail.
 `save_results_csv` and `load_results_csv` are tested for round-trip
 correctness in `tests/test_simulation.py::TestCSVRoundTrip`.
+
+---
+
+## 10. Limitations of Current Results
+
+The CSV files in `results/` were generated with the following constraints:
+
+### fast_mode=True (grey die excluded)
+
+All results use `fast_mode=True`, which skips the grey die (crazy camels) in
+probability calculations. This reduces the enumeration from ~1,049,760
+outcomes per decision to 29,160 -- a 36x speedup that made the runs feasible.
+
+With `fast_mode=False`, a single GreedyAgent game takes 10+ minutes (PyPy, 12
+cores), making 1,000-game matchups require days of compute. The `fast_mode=True`
+results are still meaningful because:
+
+- The grey die affects crazy camels, which do not count toward race rankings.
+- The EV calculations for leg bets and overall bets still use exact enumeration
+  of all 5 racing dice.
+- The primary skill signal (which camel to bet on, when to bet) is captured.
+
+However, `fast_mode=False` results may differ because crazy camel movement
+affects spectator tile payouts and can shift racing camel positions via stacking.
+A future run with `fast_mode=False` on more powerful hardware would provide the
+definitive numbers.
+
+### 1,000 games per matchup (not 10,000)
+
+The initial plan called for adaptive N starting at 1,000 and scaling to 10,000
+if confidence intervals were too wide. At 1,000 games, the 95% CI width is
+roughly +/-3% for balanced matchups. For the dominant matchups (Greedy vs
+Random at 99.8%), 1,000 games is more than sufficient.
+
+For the closer matchups (Greedy vs Conservative at 74.1%), the CI is
+[0.714, 0.769], which is narrow enough to draw clear conclusions. Scaling to
+10,000 games would tighten this to +/-1% but is unlikely to change the
+qualitative findings.
+
+### Compute environment
+
+Results were generated on a 12-core Apple Silicon Mac with PyPy 3.10. Total
+wall-clock time for all 7 matchups: ~57 minutes. A dedicated server or cloud
+instance with more cores could run the full `fast_mode=False` suite in
+reasonable time.
