@@ -37,30 +37,34 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for detailed methodology and implementati
 |-------|-------------|--------|
 | Phase 1 | Core Game Engine | Complete (133 tests) |
 | Phase 2 | Probability Calculator | Complete (25 tests) |
-| Phase 3 | Agent Implementation | Complete (22 tests) |
+| Phase 3 | Agent Implementation | Complete (23 tests) |
+| Pre-Phase 4 | Monte Carlo Validation | Complete (8 tests) |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
+
+**Total: 189 tests**
 
 ## Installation
 
 ```bash
 git clone https://github.com/davcwluk/camelup-monte-carlo.git
 cd camelup-monte-carlo
-pip install -r requirements.txt
 
-# For faster execution (recommended):
+# Install PyPy (6-10x faster than CPython)
 brew install pypy3  # Mac
 # or download from https://www.pypy.org/download.html (Windows)
+
+pypy3 -m pip install pytest pytest-xdist
 ```
 
 ## Usage
 
 ```bash
-# Run tests (PyPy recommended for speed)
-pypy3 -m pytest tests/
+# Run all tests in parallel across all CPU cores
+pypy3 -m pytest tests/ -v -n auto
 
-# Or with standard Python
-python -m pytest tests/
+# Skip slow tests (grey die enumeration ~1M outcomes)
+pypy3 -m pytest tests/ -v -n auto -m "not slow"
 ```
 
 ## Performance
@@ -71,9 +75,16 @@ The probability calculator enumerates all possible dice outcomes:
 
 | Runtime | 1000 Games (12 CPU cores) |
 |---------|---------------------------|
-| Python + fast_mode | ~3 hours |
 | PyPy + fast_mode | ~20 minutes |
 | PyPy + full mode | ~3.5 hours |
+
+Test execution (validation suite, 8 tests including slow):
+
+| Configuration | Wall Time | Speedup |
+|---------------|-----------|---------|
+| CPython, single-core | 232s | 1x |
+| PyPy, single-core | 24s | 9.7x |
+| PyPy + pytest-xdist, 12 cores | 13s | 17.8x |
 
 ## License
 

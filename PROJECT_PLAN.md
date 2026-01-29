@@ -148,6 +148,10 @@ To interpret results, we compare against known reference points:
 - [x] Implement ConservativeAgent
 - [ ] OptimalAgent (deferred - GreedyAgent provides sufficient EV optimization)
 
+### Pre-Phase 4: Validation and Performance [COMPLETE]
+- [x] Monte Carlo validation tests (8 tests verifying calculator against independent simulations)
+- [x] PyPy + pytest-xdist parallel test execution setup (~18x speedup over CPython single-core)
+
 ### Phase 4: Simulation Framework
 - [ ] Game loop with multiple agents
 - [ ] Batch simulation runner
@@ -187,6 +191,7 @@ Python (for data analysis libraries and rapid prototyping)
 - `matplotlib`/`seaborn`: Visualization
 - `scipy`: Statistical tests
 - `pytest`: Unit testing
+- `pytest-xdist`: Parallel test execution across CPU cores (`-n auto`)
 - `multiprocessing`: Parallel game simulation
 
 ### Performance Benchmarks
@@ -242,7 +247,8 @@ camelup/
 │   ├── test_movement.py       # 20 tests - movement and board integration
 │   ├── test_game_flow.py      # 19 tests - turns, legs, game end
 │   ├── test_probability.py    # 25 tests - probability and EV calculations
-│   └── test_agents.py         # 20 tests - agent implementations
+│   ├── test_agents.py         # 23 tests - agent implementations
+│   └── test_probability_validation.py  # 8 tests - Monte Carlo validation
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
 └── results/
@@ -300,9 +306,12 @@ camelup/
 |-------|-------------|--------|
 | Phase 1 | Core Game Engine | Complete (133 tests) |
 | Phase 2 | Probability Calculator | Complete (25 tests) |
-| Phase 3 | Agent Implementation | Complete (20 tests) |
+| Phase 3 | Agent Implementation | Complete (23 tests) |
+| Pre-Phase 4 | Validation and Performance | Complete (8 tests) |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
+
+**Total: 189 tests**
 
 ---
 

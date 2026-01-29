@@ -2,7 +2,7 @@
 
 This document maps each rule from the Camel Up rulebook to specific test cases to verify the code implementation is correct.
 
-**Last Updated:** After implementing 133 tests (all 3 missing rules now implemented)
+**Last Updated:** 189 tests across 10 test files (Phases 1-3 + pre-Phase 4 validation)
 
 ---
 
@@ -218,7 +218,7 @@ This document maps each rule from the Camel Up rulebook to specific test cases t
 | Game Flow | 14/14 | Complete |
 | Player State | 5/5 | Complete |
 | Integration | 7/7 | Complete |
-| **Total** | **133 tests** | All rules implemented |
+| **Subtotal** | **133 tests** | All rules implemented |
 
 ---
 
@@ -230,6 +230,7 @@ All rules from the rulebook have been implemented and tested.
 
 ## Test Files
 
+### Rule Verification (Phase 1)
 - `tests/test_dice.py` - 12 tests
 - `tests/test_camel.py` - 28 tests (includes crazy camel priority/stack rule tests)
 - `tests/test_game.py` - 9 tests
@@ -238,4 +239,13 @@ All rules from the rulebook have been implemented and tested.
 - `tests/test_movement.py` - 20 tests
 - `tests/test_game_flow.py` - 19 tests (includes starting player rule test)
 
-**Total: 133 tests**
+### Probability and EV (Phase 2)
+- `tests/test_probability.py` - 25 tests
+
+### Agent Implementation (Phase 3)
+- `tests/test_agents.py` - 23 tests (includes parallel performance benchmarks)
+
+### Monte Carlo Validation (Pre-Phase 4)
+- `tests/test_probability_validation.py` - 8 tests (2 marked slow: grey die ~1M outcomes)
+
+**Total: 189 tests**
