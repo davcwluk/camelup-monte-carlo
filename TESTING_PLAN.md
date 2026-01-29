@@ -2,7 +2,7 @@
 
 This document maps each rule from the Camel Up rulebook to specific test cases to verify the code implementation is correct.
 
-**Last Updated:** 189 tests across 10 test files (Phases 1-3 + pre-Phase 4 validation)
+**Last Updated:** 206 tests across 11 test files (Phases 1-3 + pre-Phase 4 validation + game logger)
 
 ---
 
@@ -81,6 +81,8 @@ This document maps each rule from the Camel Up rulebook to specific test cases t
 | Cannot place on existing tile | `test_cannot_place_tile_on_existing_tile` | PASS |
 | Can place on cheering (+1) or booing (-1) side | `test_tile_has_two_sides` | PASS |
 | Moving tile removes it from old position | `test_moving_tile_removes_from_old_position` | PASS |
+| Can move own tile to adjacent space | `test_can_move_own_tile_to_adjacent_space` | PASS |
+| Can re-place own tile on same space (switch sides) | `test_can_move_own_tile_to_same_space` | PASS |
 
 ### 3.2 Tile Effects
 | Rule | Test Case | Status |
@@ -212,13 +214,13 @@ This document maps each rule from the Camel Up rulebook to specific test cases t
 | Basic Movement | 4/4 | Complete |
 | Camel Stacking | 7/7 | Complete |
 | Crazy Camels | 8/8 | Complete |
-| Spectator Tiles | 15/15 | Complete |
+| Spectator Tiles | 17/17 | Complete (includes own-tile adjacency fix) |
 | Betting Tickets | 15/15 | Complete |
 | Overall Betting | 11/11 | Complete |
 | Game Flow | 14/14 | Complete |
 | Player State | 5/5 | Complete |
 | Integration | 7/7 | Complete |
-| **Subtotal** | **133 tests** | All rules implemented |
+| **Subtotal** | **135 tests** | All rules implemented |
 
 ---
 
@@ -235,7 +237,7 @@ All rules from the rulebook have been implemented and tested.
 - `tests/test_camel.py` - 28 tests (includes crazy camel priority/stack rule tests)
 - `tests/test_game.py` - 9 tests
 - `tests/test_betting.py` - 30 tests
-- `tests/test_spectator.py` - 15 tests
+- `tests/test_spectator.py` - 17 tests (includes own-tile adjacency fix)
 - `tests/test_movement.py` - 20 tests
 - `tests/test_game_flow.py` - 19 tests (includes starting player rule test)
 
@@ -246,6 +248,11 @@ All rules from the rulebook have been implemented and tested.
 - `tests/test_agents.py` - 23 tests (includes parallel performance benchmarks)
 
 ### Monte Carlo Validation (Pre-Phase 4)
-- `tests/test_probability_validation.py` - 8 tests (2 marked slow: grey die ~1M outcomes)
+- `tests/test_probability_validation.py` - 10 tests (2 marked slow; 2 test leg-stops-at-5-dice correctness)
 
-**Total: 189 tests**
+### Game Logger
+- `tests/test_game_logger.py` - 13 tests (renderer + integration)
+
+**Note:** `tests/test_agents.py` has 1 additional test marked slow (full-mode greedy parallel benchmark). Total slow tests: 3.
+
+**Total: 206 tests**

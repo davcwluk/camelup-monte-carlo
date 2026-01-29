@@ -15,7 +15,7 @@ Camel Up is a popular betting game where players wager on camel races. Despite u
 
 ## Methodology
 
-- **Monte Carlo Simulation**: 10,000+ games per agent matchup
+- **Monte Carlo Simulation**: Adaptive N per matchup (start at 1,000, scale up if 95% CI > +/-1%)
 - **Agent-Based Modeling**: Random, Greedy, Heuristic, and Optimal strategies
 - **Statistical Analysis**: Win rates, score variance, and EV accuracy
 

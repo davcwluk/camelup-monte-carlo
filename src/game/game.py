@@ -66,6 +66,8 @@ class GameState:
     rng_state: tuple | None = None
     # Track last player to take pyramid ticket (for starting player rule)
     last_pyramid_ticket_player: int | None = None
+    # Track the last die roll for logging purposes
+    last_die_roll: DieRoll | None = None
 
     @classmethod
     def create_new_game(
@@ -323,7 +325,8 @@ class GameState:
             leg_number=new_leg_number,
             is_game_over=is_game_over,
             rng_state=rng.getstate(),
-            last_pyramid_ticket_player=new_last_pyramid_player
+            last_pyramid_ticket_player=new_last_pyramid_player,
+            last_die_roll=die_roll
         )
 
     def get_scores(self) -> Tuple[int, ...]:
@@ -364,7 +367,8 @@ def play_game(
     num_players: int,
     agent_functions: List,
     seed: int | None = None,
-    verbose: bool = False
+    verbose: bool = False,
+    logger=None
 ) -> Tuple[GameState, List[Action]]:
     """
     Play a complete game with given agent functions.
@@ -374,6 +378,7 @@ def play_game(
         agent_functions: List of functions that take (state, legal_actions) and return action
         seed: Random seed for reproducibility
         verbose: Print game state after each action
+        logger: Optional GameLogger for detailed human-readable output
 
     Returns:
         Tuple of (final_state, action_history)
@@ -381,6 +386,10 @@ def play_game(
     state = GameState.create_new_game(num_players, seed)
     rng = random.Random(seed)
     history = []
+    turn_num = 0
+
+    if logger:
+        logger.log_game_start(state, seed, agent_functions)
 
     while not state.is_game_over:
         legal_actions = state.get_legal_actions()
@@ -396,6 +405,9 @@ def play_game(
             raise ValueError(f"Agent returned illegal action: {action}")
 
         history.append(action)
+        turn_num += 1
+
+        old_state = state
 
         if verbose:
             print(f"Player {state.current_player}: {action}")
@@ -405,5 +417,15 @@ def play_game(
         if verbose:
             print(state)
             print()
+
+        if logger:
+            logger.log_turn(turn_num, old_state, action, state, agent)
+
+            # Detect leg end
+            if old_state.leg_number != state.leg_number:
+                logger.log_leg_end(old_state.leg_number, old_state, state, action)
+
+    if logger:
+        logger.log_game_end(state)
 
     return state, history

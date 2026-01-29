@@ -129,7 +129,7 @@ To interpret results, we compare against known reference points:
 - [x] Implement spectator tile mechanics
 - [x] Implement leg scoring
 - [x] Implement game end detection and final scoring
-- [x] Unit tests for all game mechanics (133 tests passing)
+- [x] Unit tests for all game mechanics (135 tests passing)
 
 ### Phase 2: Probability Calculator [COMPLETE]
 - [x] Enumerate all possible leg outcomes (this IS the probability calculation)
@@ -151,6 +151,7 @@ To interpret results, we compare against known reference points:
 ### Pre-Phase 4: Validation and Performance [COMPLETE]
 - [x] Monte Carlo validation tests (8 tests verifying calculator against independent simulations)
 - [x] PyPy + pytest-xdist parallel test execution setup (~18x speedup over CPython single-core)
+- [x] Human-readable game logger for debugging (GameLogger, renderers, play_game integration)
 
 ### Phase 4: Simulation Framework
 - [ ] Game loop with multiple agents
@@ -233,6 +234,10 @@ camelup/
 │   │   ├── heuristic_agent.py
 │   │   ├── optimal_agent.py
 │   │   └── conservative_agent.py
+│   ├── logging/
+│   │   ├── __init__.py
+│   │   ├── renderer.py       # Board/state text rendering
+│   │   └── game_logger.py    # Per-game human-readable logger
 │   └── simulation/
 │       ├── __init__.py
 │       ├── runner.py         # Simulation runner
@@ -243,12 +248,13 @@ camelup/
 │   ├── test_camel.py          # 28 tests - camel and stack mechanics
 │   ├── test_game.py           # 9 tests - game state and actions
 │   ├── test_betting.py        # 30 tests - betting tickets and scoring
-│   ├── test_spectator.py      # 15 tests - spectator tile mechanics
+│   ├── test_spectator.py      # 17 tests - spectator tile mechanics
 │   ├── test_movement.py       # 20 tests - movement and board integration
 │   ├── test_game_flow.py      # 19 tests - turns, legs, game end
 │   ├── test_probability.py    # 25 tests - probability and EV calculations
-│   ├── test_agents.py         # 23 tests - agent implementations
-│   └── test_probability_validation.py  # 8 tests - Monte Carlo validation
+│   ├── test_agents.py         # 23 tests - agent implementations (1 marked slow)
+│   ├── test_probability_validation.py  # 10 tests - Monte Carlo validation (2 marked slow)
+│   └── test_game_logger.py    # 13 tests - renderer + logger integration
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
 └── results/
@@ -262,7 +268,7 @@ camelup/
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
 | Number of players | 2 | Simplifies analysis, clearer skill signal |
-| Games per matchup | 10,000 | Statistical significance |
+| Games per matchup | Adaptive N (start 1,000; scale up if 95% CI > +/-1%) | See question.md Q4 |
 | Random seed | Fixed for reproducibility | Reproducibility |
 | Track length | 16 spaces (standard) | Per rulebook |
 
@@ -279,7 +285,7 @@ camelup/
 ## Analysis Plan
 
 ### RQ1: Win Rate of Optimal vs Random
-- Run 10,000 games of OptimalAgent vs RandomAgent
+- Run adaptive N games of OptimalAgent vs RandomAgent (start 1,000; scale up if 95% CI > +/-1%)
 - Calculate win rate with 95% confidence interval
 - Compare to reference games (see Context for Interpretation)
 
@@ -304,14 +310,14 @@ camelup/
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 1 | Core Game Engine | Complete (133 tests) |
+| Phase 1 | Core Game Engine | Complete (135 tests) |
 | Phase 2 | Probability Calculator | Complete (25 tests) |
 | Phase 3 | Agent Implementation | Complete (23 tests) |
 | Pre-Phase 4 | Validation and Performance | Complete (8 tests) |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
 
-**Total: 189 tests**
+**Total: 206 tests (3 marked slow)**
 
 ---
 

@@ -57,7 +57,12 @@ def simulate_random_leg(
     rng.shuffle(racing_remaining)
     racing_idx = 0
 
-    for token in pool:
+    # A leg ends when 1 die remains in the pyramid. Draw len(remaining_dice)
+    # dice -- when grey is included, that leaves 1 behind; when grey is
+    # excluded, we roll all racing dice (the untracked grey is left behind).
+    dice_to_draw = len(remaining_dice)
+
+    for token in pool[:dice_to_draw]:
         if token == "grey":
             # Pick one of the 6 grey die outcomes uniformly
             grey_outcomes = enumerate_grey_die_outcomes()
@@ -327,6 +332,74 @@ class TestMonteCarloValidation:
 
 N_FULL = 5_000
 TOLERANCE_FULL = 0.04  # Slightly wider for fewer simulations
+
+
+class TestLegStopsAfterFiveDice:
+    """Verify the calculator stops after 5 dice (1 remains in pyramid).
+
+    This is the critical correctness test: a leg ends when 5 of 6 dice are
+    revealed. If the calculator simulates all 6 dice, rankings are wrong
+    because an extra camel move occurs after the leg should have ended.
+    """
+
+    def test_sixth_die_not_simulated(self):
+        """Only Blue's die + grey remain. One is drawn, one stays.
+
+        Setup: Blue at 14, Green at 15. Other racers far behind. Crazy
+        camels at space 10 (won't interfere).
+
+        Correct (1 die drawn from 2 remaining):
+          - Blue drawn (50%): Blue moves to 15-17, overtakes Green -> Blue 1st
+          - Grey drawn (50%): crazy camel moves, Blue stays at 14 -> Green 1st
+          P(Blue 1st) = 0.5
+
+        Buggy (both dice drawn):
+          Blue always moves -> P(Blue 1st) = 1.0
+        """
+        positions = CamelPositions.create_empty()
+        positions = positions.place_camel(CamelColor.BLUE, 14)
+        positions = positions.place_camel(CamelColor.GREEN, 15)
+        positions = positions.place_camel(CamelColor.YELLOW, 1)
+        positions = positions.place_camel(CamelColor.RED, 1)
+        positions = positions.place_camel(CamelColor.PURPLE, 1)
+        positions = positions.place_camel(CamelColor.WHITE, 10)
+        positions = positions.place_camel(CamelColor.BLACK, 10)
+        board = Board(camel_positions=positions, spectator_tiles={})
+
+        probs = calculate_all_probabilities(
+            board=board,
+            remaining_racing_dice=[DieColor.BLUE],
+            grey_die_available=True,
+        )
+
+        p_blue_first = probs.ranking.probabilities[CamelColor.BLUE][0]
+        assert abs(p_blue_first - 0.5) < 0.01, (
+            f"P(Blue 1st) = {p_blue_first:.4f}, expected 0.5. "
+            f"If ~1.0, the calculator is simulating the 6th die (bug)."
+        )
+
+    def test_sixth_die_not_simulated_mc_agrees(self):
+        """Monte Carlo validator also stops after 5 dice."""
+        positions = CamelPositions.create_empty()
+        positions = positions.place_camel(CamelColor.BLUE, 14)
+        positions = positions.place_camel(CamelColor.GREEN, 15)
+        positions = positions.place_camel(CamelColor.YELLOW, 1)
+        positions = positions.place_camel(CamelColor.RED, 1)
+        positions = positions.place_camel(CamelColor.PURPLE, 1)
+        positions = positions.place_camel(CamelColor.WHITE, 10)
+        positions = positions.place_camel(CamelColor.BLACK, 10)
+        board = Board(camel_positions=positions, spectator_tiles={})
+
+        counts = run_monte_carlo(
+            board, [DieColor.BLUE], grey_die_available=True,
+            n_simulations=10_000, seed=888,
+        )
+
+        p_blue_first = counts[CamelColor.BLUE][0] / 10_000
+        assert abs(p_blue_first - 0.5) < 0.03, (
+            f"MC P(Blue 1st) = {p_blue_first:.4f}, expected ~0.5. "
+            f"If ~1.0, the MC validator is simulating the 6th die (bug)."
+        )
 
 
 @pytest.mark.slow

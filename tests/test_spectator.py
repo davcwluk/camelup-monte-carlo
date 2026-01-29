@@ -58,6 +58,29 @@ class TestSpectatorTilePlacement:
 
         assert not board.can_place_spectator_tile(space=5, player=1)
 
+    def test_can_move_own_tile_to_adjacent_space(self):
+        """Player can move their own tile to an adjacent space."""
+        board = Board.create_empty()
+        board = board.place_spectator_tile(space=5, player=0, is_cheering=True)
+
+        # Player 0 should be able to place adjacent to their own tile
+        assert board.can_place_spectator_tile(space=4, player=0)
+        assert board.can_place_spectator_tile(space=6, player=0)
+
+        # But player 1 still cannot
+        assert not board.can_place_spectator_tile(space=4, player=1)
+        assert not board.can_place_spectator_tile(space=6, player=1)
+
+    def test_can_move_own_tile_to_same_space(self):
+        """Player can re-place their tile on the same space (e.g., switch sides)."""
+        board = Board.create_empty()
+        board = board.place_spectator_tile(space=5, player=0, is_cheering=True)
+
+        # Player 0 can place on the same space (switch to booing)
+        assert board.can_place_spectator_tile(space=5, player=0)
+        board = board.place_spectator_tile(space=5, player=0, is_cheering=False)
+        assert board.get_spectator_tile(5).is_cheering is False
+
     def test_tile_has_two_sides(self):
         """Spectator tile can be placed cheering (+1) or booing (-1)."""
         cheering_tile = SpectatorTile(owner=0, is_cheering=True)

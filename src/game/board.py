@@ -80,14 +80,14 @@ class Board:
         if self.get_stack_at(space):
             return False
 
-        # Check if space already has a tile
-        if space in self.spectator_tiles:
+        # Check if space already has a tile (from another player)
+        if space in self.spectator_tiles and self.spectator_tiles[space].owner != player:
             return False
 
-        # Check adjacent spaces for other tiles
-        if (space - 1) in self.spectator_tiles:
+        # Check adjacent spaces for other players' tiles
+        if (space - 1) in self.spectator_tiles and self.spectator_tiles[space - 1].owner != player:
             return False
-        if (space + 1) in self.spectator_tiles:
+        if (space + 1) in self.spectator_tiles and self.spectator_tiles[space + 1].owner != player:
             return False
 
         return True

@@ -20,6 +20,7 @@ class Agent(ABC):
         """
         self.name = name or self.__class__.__name__
         self.rng = random.Random(seed)
+        self.last_action_evs = None
 
     @abstractmethod
     def choose_action(

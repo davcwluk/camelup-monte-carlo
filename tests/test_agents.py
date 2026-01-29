@@ -391,6 +391,7 @@ class TestParallelPerformance:
         # Greedy games should show meaningful speedup
         assert speedup > 1.5, f"Expected speedup > 1.5x, got {speedup:.1f}x"
 
+    @pytest.mark.slow
     def test_parallel_greedy_full_mode(self):
         """
         Greedy games WITH grey die (full probability calculation).

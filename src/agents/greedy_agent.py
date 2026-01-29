@@ -92,6 +92,9 @@ class GreedyAgent(Agent):
         # Sort by EV descending and pick the best
         action_evs.sort(key=lambda x: x[1], reverse=True)
 
+        # Store top 3 EVs for logging
+        self.last_action_evs = action_evs[:3]
+
         # If multiple actions have the same EV, pick randomly among them
         best_ev = action_evs[0][1]
         best_actions = [a for a, ev in action_evs if ev == best_ev]

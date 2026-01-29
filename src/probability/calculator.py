@@ -235,7 +235,14 @@ def simulate_sequence_with_grey(
 
     total_dice = len(racing_sequence) + (1 if grey_outcome else 0)
 
-    for i in range(total_dice):
+    # A leg ends when 1 die remains in the pyramid. When grey is included,
+    # the pyramid has total_dice entries; simulate total_dice - 1 to leave
+    # one behind. When grey is excluded (fast_mode), all racing dice are
+    # simulated because the untracked grey die is the one left behind.
+    # In both cases, the correct count is len(racing_sequence).
+    dice_to_simulate = len(racing_sequence)
+
+    for i in range(dice_to_simulate):
         if grey_outcome and i == grey_position:
             # Roll grey die
             grey_camel_shown, value = grey_outcome
