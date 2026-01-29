@@ -229,7 +229,10 @@ class CamelPositions:
         remaining_at_origin, moving_stack = origin_stack.remove_camels_from(camel)
 
         # Get the stack at destination (if within bounds)
-        if new_space < len(self.stacks):
+        # Special case: if destination is same as origin, use the remaining stack
+        if new_space == current_space:
+            dest_stack = remaining_at_origin
+        elif new_space < len(self.stacks):
             dest_stack = self.stacks[new_space]
         else:
             dest_stack = CamelStack.empty()

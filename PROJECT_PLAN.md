@@ -140,13 +140,13 @@ To interpret results, we compare against known reference points:
 - [x] Calculate EV for spectator tile placement
 - [x] Calculate EV for overall winner/loser bets
 
-### Phase 3: Agent Implementation
-- [ ] Implement base Agent interface
-- [ ] Implement RandomAgent
-- [ ] Implement GreedyAgent
-- [ ] Implement HeuristicAgent
-- [ ] Implement OptimalAgent
-- [ ] Implement ConservativeAgent
+### Phase 3: Agent Implementation [COMPLETE]
+- [x] Implement base Agent interface
+- [x] Implement RandomAgent
+- [x] Implement GreedyAgent (with overall bet threshold)
+- [x] Implement HeuristicAgent
+- [x] Implement ConservativeAgent
+- [ ] OptimalAgent (deferred - GreedyAgent provides sufficient EV optimization)
 
 ### Phase 4: Simulation Framework
 - [ ] Game loop with multiple agents
@@ -169,12 +169,29 @@ To interpret results, we compare against known reference points:
 ### Language
 Python (for data analysis libraries and rapid prototyping)
 
+### Runtime
+- **PyPy 3.10**: 6-10x faster than CPython for probability calculations
+- Install: `brew install pypy3` (Mac) or download from pypy.org (Windows)
+- Run: `pypy3 -m pytest tests/` or `pypy3 script.py`
+
 ### Key Libraries
 - `numpy`: Numerical computations
 - `pandas`: Data analysis and results storage
 - `matplotlib`/`seaborn`: Visualization
 - `scipy`: Statistical tests
 - `pytest`: Unit testing
+- `multiprocessing`: Parallel game simulation
+
+### Performance Benchmarks
+
+| Mode | Outcomes/Decision | 1000 Games (PyPy + 12 cores) |
+|------|-------------------|------------------------------|
+| fast_mode=True (no grey die) | 29,160 | ~20 minutes |
+| fast_mode=False (with grey die) | ~1,000,000 | ~3.5 hours |
+
+Single decision timing (PyPy vs Python):
+- fast_mode=True: PyPy 0.35s vs Python 1.45s (4x faster)
+- fast_mode=False: PyPy 8.3s vs Python 79s (9.5x faster)
 
 ### Project Structure
 ```
@@ -218,7 +235,7 @@ camelup/
 │   ├── test_movement.py       # 20 tests - movement and board integration
 │   ├── test_game_flow.py      # 19 tests - turns, legs, game end
 │   ├── test_probability.py    # 25 tests - probability and EV calculations
-│   └── test_agents.py         # (Phase 3)
+│   └── test_agents.py         # 20 tests - agent implementations
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
 └── results/
@@ -276,7 +293,7 @@ camelup/
 |-------|-------------|--------|
 | Phase 1 | Core Game Engine | Complete (133 tests) |
 | Phase 2 | Probability Calculator | Complete (25 tests) |
-| Phase 3 | Agent Implementation | Not Started |
+| Phase 3 | Agent Implementation | Complete (20 tests) |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
 

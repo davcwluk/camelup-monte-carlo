@@ -35,31 +35,45 @@ See [PROJECT_PLAN.md](PROJECT_PLAN.md) for detailed methodology and implementati
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 1 | Core Game Engine | Not Started |
-| Phase 2 | Probability Calculator | Not Started |
-| Phase 3 | Agent Implementation | Not Started |
+| Phase 1 | Core Game Engine | Complete (133 tests) |
+| Phase 2 | Probability Calculator | Complete (25 tests) |
+| Phase 3 | Agent Implementation | Complete (22 tests) |
 | Phase 4 | Simulation Framework | Not Started |
 | Phase 5 | Analysis and Visualization | Not Started |
 
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/camelup.git
-cd camelup
-python -m venv venv
-source venv/bin/activate
+git clone https://github.com/davcwluk/camelup-monte-carlo.git
+cd camelup-monte-carlo
 pip install -r requirements.txt
+
+# For faster execution (recommended):
+brew install pypy3  # Mac
+# or download from https://www.pypy.org/download.html (Windows)
 ```
 
 ## Usage
 
 ```bash
-# Run simulation
-python -m src.simulation.runner
+# Run tests (PyPy recommended for speed)
+pypy3 -m pytest tests/
 
-# Run tests
-pytest tests/
+# Or with standard Python
+python -m pytest tests/
 ```
+
+## Performance
+
+The probability calculator enumerates all possible dice outcomes:
+- **fast_mode=True** (no grey die): 29,160 outcomes per decision
+- **fast_mode=False** (with grey die): ~1,000,000 outcomes per decision
+
+| Runtime | 1000 Games (12 CPU cores) |
+|---------|---------------------------|
+| Python + fast_mode | ~3 hours |
+| PyPy + fast_mode | ~20 minutes |
+| PyPy + full mode | ~3.5 hours |
 
 ## License
 

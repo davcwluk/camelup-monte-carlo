@@ -419,10 +419,12 @@ def calculate_all_probabilities(
                         board, racing_seq, grey_outcome, grey_pos
                     )
 
-                    # Record ranking
-                    for pos, camel in enumerate(outcome.ranking):
+                    # Record ranking - count positions among racing camels only
+                    racing_pos = 0
+                    for camel in outcome.ranking:
                         if camel in ranking_counts:
-                            ranking_counts[camel][pos] += 1
+                            ranking_counts[camel][racing_pos] += 1
+                            racing_pos += 1
 
                     # Record space landings
                     for space in outcome.spaces_landed:
@@ -432,11 +434,12 @@ def calculate_all_probabilities(
                     if outcome.game_finished:
                         game_ends_count += 1
                         if outcome.ranking:
-                            winner = outcome.ranking[0]
-                            loser = outcome.ranking[-1]
-                            if winner in win_counts:
+                            # Winner/loser among racing camels
+                            racing_ranking = [c for c in outcome.ranking if c in RACING_CAMELS]
+                            if racing_ranking:
+                                winner = racing_ranking[0]
+                                loser = racing_ranking[-1]
                                 win_counts[winner] += 1
-                            if loser in lose_counts:
                                 lose_counts[loser] += 1
 
                     total_outcomes += 1
@@ -444,9 +447,12 @@ def calculate_all_probabilities(
         for racing_seq in racing_sequences:
             outcome = simulate_sequence_with_grey(board, racing_seq, None, None)
 
-            for pos, camel in enumerate(outcome.ranking):
+            # Count positions among racing camels only
+            racing_pos = 0
+            for camel in outcome.ranking:
                 if camel in ranking_counts:
-                    ranking_counts[camel][pos] += 1
+                    ranking_counts[camel][racing_pos] += 1
+                    racing_pos += 1
 
             for space in outcome.spaces_landed:
                 space_landing_counts[space] += 1
@@ -454,11 +460,12 @@ def calculate_all_probabilities(
             if outcome.game_finished:
                 game_ends_count += 1
                 if outcome.ranking:
-                    winner = outcome.ranking[0]
-                    loser = outcome.ranking[-1]
-                    if winner in win_counts:
+                    # Winner/loser among racing camels
+                    racing_ranking = [c for c in outcome.ranking if c in RACING_CAMELS]
+                    if racing_ranking:
+                        winner = racing_ranking[0]
+                        loser = racing_ranking[-1]
                         win_counts[winner] += 1
-                    if loser in lose_counts:
                         lose_counts[loser] += 1
 
             total_outcomes += 1
