@@ -125,32 +125,40 @@ def get_remaining_dice(rolled_dice: FrozenSet[DieColor], include_grey: bool = Tr
 
 
 def enumerate_dice_sequences(
-    remaining_dice: List[DieColor]
+    remaining_dice: List[DieColor],
+    depth_limit: int | None = None
 ) -> List[Tuple[Tuple[DieColor, int], ...]]:
     """
     Enumerate all possible sequences of dice rolls.
-    
-    For N remaining dice, generates N! x 3^N sequences.
+
+    For N remaining dice with no depth_limit, generates N! x 3^N sequences.
+    With depth_limit=d, generates P(N,d) x 3^d partial sequences.
     Each sequence is a tuple of (die_color, value) pairs.
-    
+
     Args:
         remaining_dice: List of dice colors still in pyramid
-    
+        depth_limit: If set, only enumerate the next d dice instead of all.
+            Clamps to len(remaining_dice) if larger.
+
     Returns:
         List of all possible dice sequences
     """
     if not remaining_dice:
         return [()]
-    
+
+    d = len(remaining_dice) if depth_limit is None else min(depth_limit, len(remaining_dice))
+    if d == 0:
+        return [()]
+
     sequences = []
-    
-    # All possible orderings of dice
-    for dice_order in permutations(remaining_dice):
+
+    # All possible orderings of d dice chosen from remaining
+    for dice_order in permutations(remaining_dice, d):
         # All possible value combinations (1, 2, or 3 for each die)
-        for values in product(DICE_VALUES, repeat=len(dice_order)):
+        for values in product(DICE_VALUES, repeat=d):
             sequence = tuple(zip(dice_order, values))
             sequences.append(sequence)
-    
+
     return sequences
 
 
@@ -214,7 +222,8 @@ def simulate_sequence_with_grey(
     board: Board,
     racing_sequence: Tuple[Tuple[DieColor, int], ...],
     grey_outcome: Tuple[CamelColor, int] | None,
-    grey_position: int | None
+    grey_position: int | None,
+    total_dice_to_simulate: int | None = None
 ) -> LegOutcome:
     """
     Simulate a sequence including grey die at a specific position.
@@ -224,6 +233,10 @@ def simulate_sequence_with_grey(
         racing_sequence: Sequence of racing die rolls
         grey_outcome: (crazy_camel, value) for grey die, or None if not rolled
         grey_position: Position in sequence where grey die is rolled (0 to len)
+        total_dice_to_simulate: Override for number of dice to simulate.
+            Used with depth_limit to ensure the correct number of dice are
+            simulated when grey die is included (racing sequence has
+            depth_limit-1 entries but we want depth_limit total steps).
 
     Returns:
         LegOutcome with final ranking, spaces landed, and game finish status
@@ -240,7 +253,10 @@ def simulate_sequence_with_grey(
     # one behind. When grey is excluded (fast_mode), all racing dice are
     # simulated because the untracked grey die is the one left behind.
     # In both cases, the correct count is len(racing_sequence).
-    dice_to_simulate = len(racing_sequence)
+    if total_dice_to_simulate is not None:
+        dice_to_simulate = total_dice_to_simulate
+    else:
+        dice_to_simulate = len(racing_sequence)
 
     for i in range(dice_to_simulate):
         if grey_outcome and i == grey_position:
@@ -283,18 +299,21 @@ def simulate_sequence_with_grey(
 def calculate_ranking_probabilities(
     board: Board,
     remaining_racing_dice: List[DieColor],
-    grey_die_available: bool
+    grey_die_available: bool,
+    depth_limit: int | None = None
 ) -> RankingProbabilities:
     """
     Calculate exact probability distribution for camel rankings.
-    
+
     Enumerates all possible dice outcomes and their probabilities.
-    
+
     Args:
         board: Current board state
         remaining_racing_dice: Racing dice still in pyramid
         grey_die_available: Whether grey die hasn't been rolled yet
-    
+        depth_limit: If set, only enumerate the next d dice instead of all
+            remaining. Models bounded lookahead (e.g. human cognition).
+
     Returns:
         RankingProbabilities with exact probabilities
     """
@@ -303,41 +322,57 @@ def calculate_ranking_probabilities(
         camel: [0] * 5 for camel in RACING_CAMELS
     }
     total_outcomes = 0
-    
-    # Generate all racing die sequences
-    racing_sequences = enumerate_dice_sequences(remaining_racing_dice)
-    
-    if grey_die_available:
-        # Grey die can be rolled at any position
+
+    if grey_die_available and depth_limit is not None:
+        # Depth-limited with grey die: grey takes one slot
+        racing_depth = depth_limit - 1
+        racing_sequences = enumerate_dice_sequences(remaining_racing_dice, depth_limit=racing_depth)
         grey_outcomes = enumerate_grey_die_outcomes()
-        num_total_dice = len(remaining_racing_dice) + 1
-        
+
         for racing_seq in racing_sequences:
             for grey_outcome in grey_outcomes:
-                # Grey die can be at positions 0 to num_total_dice-1
-                # But actually it's drawn uniformly, so position matters
+                for grey_pos in range(depth_limit):
+                    outcome = simulate_sequence_with_grey(
+                        board, racing_seq, grey_outcome, grey_pos,
+                        total_dice_to_simulate=depth_limit
+                    )
+
+                    for pos, camel in enumerate(outcome.ranking):
+                        if camel in ranking_counts:
+                            ranking_counts[camel][pos] += 1
+
+                    total_outcomes += 1
+
+    elif grey_die_available:
+        # Full enumeration with grey die
+        racing_sequences = enumerate_dice_sequences(remaining_racing_dice)
+        grey_outcomes = enumerate_grey_die_outcomes()
+        num_total_dice = len(remaining_racing_dice) + 1
+
+        for racing_seq in racing_sequences:
+            for grey_outcome in grey_outcomes:
                 for grey_pos in range(num_total_dice):
                     outcome = simulate_sequence_with_grey(
                         board, racing_seq, grey_outcome, grey_pos
                     )
-                    
-                    # Record ranking
+
                     for pos, camel in enumerate(outcome.ranking):
                         if camel in ranking_counts:
                             ranking_counts[camel][pos] += 1
-                    
+
                     total_outcomes += 1
     else:
-        # No grey die, just racing dice
+        # No grey die (with or without depth_limit)
+        racing_sequences = enumerate_dice_sequences(remaining_racing_dice, depth_limit=depth_limit)
         for racing_seq in racing_sequences:
             outcome = simulate_sequence_with_grey(board, racing_seq, None, None)
-            
+
             for pos, camel in enumerate(outcome.ranking):
                 if camel in ranking_counts:
                     ranking_counts[camel][pos] += 1
-            
+
             total_outcomes += 1
-    
+
     # Convert counts to probabilities
     probabilities = {}
     for camel, counts in ranking_counts.items():
@@ -346,7 +381,7 @@ def calculate_ranking_probabilities(
         else:
             probs = tuple(0.0 for _ in counts)
         probabilities[camel] = probs
-    
+
     return RankingProbabilities(probabilities=probabilities)
 
 
@@ -389,7 +424,8 @@ class FullProbabilities:
 def calculate_all_probabilities(
     board: Board,
     remaining_racing_dice: List[DieColor],
-    grey_die_available: bool
+    grey_die_available: bool,
+    depth_limit: int | None = None
 ) -> FullProbabilities:
     """
     Calculate all probabilities: rankings, space landings, and overall race.
@@ -398,6 +434,8 @@ def calculate_all_probabilities(
         board: Current board state
         remaining_racing_dice: Racing dice still in pyramid
         grey_die_available: Whether grey die hasn't been rolled yet
+        depth_limit: If set, only enumerate the next d dice instead of all
+            remaining. Models bounded lookahead (e.g. human cognition).
 
     Returns:
         FullProbabilities with all calculated values
@@ -412,10 +450,50 @@ def calculate_all_probabilities(
     game_ends_count = 0
     total_outcomes = 0
 
-    # Generate all racing die sequences
-    racing_sequences = enumerate_dice_sequences(remaining_racing_dice)
+    def _record_outcome(outcome):
+        nonlocal total_outcomes, game_ends_count
+        # Record ranking - count positions among racing camels only
+        racing_pos = 0
+        for camel in outcome.ranking:
+            if camel in ranking_counts:
+                ranking_counts[camel][racing_pos] += 1
+                racing_pos += 1
 
-    if grey_die_available:
+        # Record space landings
+        for space in outcome.spaces_landed:
+            space_landing_counts[space] += 1
+
+        # Record game end outcomes
+        if outcome.game_finished:
+            game_ends_count += 1
+            if outcome.ranking:
+                racing_ranking = [c for c in outcome.ranking if c in RACING_CAMELS]
+                if racing_ranking:
+                    winner = racing_ranking[0]
+                    loser = racing_ranking[-1]
+                    win_counts[winner] += 1
+                    lose_counts[loser] += 1
+
+        total_outcomes += 1
+
+    if grey_die_available and depth_limit is not None:
+        # Depth-limited with grey die: grey takes one slot
+        racing_depth = depth_limit - 1
+        racing_sequences = enumerate_dice_sequences(remaining_racing_dice, depth_limit=racing_depth)
+        grey_outcomes = enumerate_grey_die_outcomes()
+
+        for racing_seq in racing_sequences:
+            for grey_outcome in grey_outcomes:
+                for grey_pos in range(depth_limit):
+                    outcome = simulate_sequence_with_grey(
+                        board, racing_seq, grey_outcome, grey_pos,
+                        total_dice_to_simulate=depth_limit
+                    )
+                    _record_outcome(outcome)
+
+    elif grey_die_available:
+        # Full enumeration with grey die
+        racing_sequences = enumerate_dice_sequences(remaining_racing_dice)
         grey_outcomes = enumerate_grey_die_outcomes()
         num_total_dice = len(remaining_racing_dice) + 1
 
@@ -425,57 +503,13 @@ def calculate_all_probabilities(
                     outcome = simulate_sequence_with_grey(
                         board, racing_seq, grey_outcome, grey_pos
                     )
-
-                    # Record ranking - count positions among racing camels only
-                    racing_pos = 0
-                    for camel in outcome.ranking:
-                        if camel in ranking_counts:
-                            ranking_counts[camel][racing_pos] += 1
-                            racing_pos += 1
-
-                    # Record space landings
-                    for space in outcome.spaces_landed:
-                        space_landing_counts[space] += 1
-
-                    # Record game end outcomes
-                    if outcome.game_finished:
-                        game_ends_count += 1
-                        if outcome.ranking:
-                            # Winner/loser among racing camels
-                            racing_ranking = [c for c in outcome.ranking if c in RACING_CAMELS]
-                            if racing_ranking:
-                                winner = racing_ranking[0]
-                                loser = racing_ranking[-1]
-                                win_counts[winner] += 1
-                                lose_counts[loser] += 1
-
-                    total_outcomes += 1
+                    _record_outcome(outcome)
     else:
+        # No grey die (with or without depth_limit)
+        racing_sequences = enumerate_dice_sequences(remaining_racing_dice, depth_limit=depth_limit)
         for racing_seq in racing_sequences:
             outcome = simulate_sequence_with_grey(board, racing_seq, None, None)
-
-            # Count positions among racing camels only
-            racing_pos = 0
-            for camel in outcome.ranking:
-                if camel in ranking_counts:
-                    ranking_counts[camel][racing_pos] += 1
-                    racing_pos += 1
-
-            for space in outcome.spaces_landed:
-                space_landing_counts[space] += 1
-
-            if outcome.game_finished:
-                game_ends_count += 1
-                if outcome.ranking:
-                    # Winner/loser among racing camels
-                    racing_ranking = [c for c in outcome.ranking if c in RACING_CAMELS]
-                    if racing_ranking:
-                        winner = racing_ranking[0]
-                        loser = racing_ranking[-1]
-                        win_counts[winner] += 1
-                        lose_counts[loser] += 1
-
-            total_outcomes += 1
+            _record_outcome(outcome)
 
     # Convert counts to probabilities
     if total_outcomes > 0:

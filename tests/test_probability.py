@@ -64,11 +64,94 @@ class TestEnumeration:
         """Grey die has 6 outcomes (2 camels x 3 values)."""
         outcomes = enumerate_grey_die_outcomes()
         assert len(outcomes) == 6
-        
+
         # Check all combinations present
         for camel in [CamelColor.WHITE, CamelColor.BLACK]:
             for value in [1, 2, 3]:
                 assert (camel, value) in outcomes
+
+    def test_enumerate_depth_limit_2(self):
+        """5 dice, depth_limit=2: P(5,2) * 3^2 = 20 * 9 = 180 sequences."""
+        all_racing = [DieColor.BLUE, DieColor.GREEN, DieColor.YELLOW,
+                      DieColor.RED, DieColor.PURPLE]
+        sequences = enumerate_dice_sequences(all_racing, depth_limit=2)
+        assert len(sequences) == 180
+
+    def test_enumerate_depth_limit_3(self):
+        """5 dice, depth_limit=3: P(5,3) * 3^3 = 60 * 27 = 1620 sequences."""
+        all_racing = [DieColor.BLUE, DieColor.GREEN, DieColor.YELLOW,
+                      DieColor.RED, DieColor.PURPLE]
+        sequences = enumerate_dice_sequences(all_racing, depth_limit=3)
+        assert len(sequences) == 1620
+
+    def test_enumerate_depth_limit_1(self):
+        """5 dice, depth_limit=1: P(5,1) * 3^1 = 5 * 3 = 15 sequences."""
+        all_racing = [DieColor.BLUE, DieColor.GREEN, DieColor.YELLOW,
+                      DieColor.RED, DieColor.PURPLE]
+        sequences = enumerate_dice_sequences(all_racing, depth_limit=1)
+        assert len(sequences) == 15
+
+    def test_enumerate_depth_limit_none_unchanged(self):
+        """depth_limit=None produces same result as before (29,160)."""
+        all_racing = [DieColor.BLUE, DieColor.GREEN, DieColor.YELLOW,
+                      DieColor.RED, DieColor.PURPLE]
+        sequences = enumerate_dice_sequences(all_racing, depth_limit=None)
+        assert len(sequences) == 29160
+
+    def test_enumerate_depth_limit_exceeds_dice(self):
+        """2 dice, depth_limit=5: clamps to 2, gives 2! * 3^2 = 18."""
+        two_dice = [DieColor.BLUE, DieColor.GREEN]
+        sequences = enumerate_dice_sequences(two_dice, depth_limit=5)
+        assert len(sequences) == 18
+
+    def test_depth_limited_probabilities_sum_to_one(self):
+        """Ranking probs with depth_limit still sum to 1.0 per position."""
+        positions = CamelPositions.create_empty()
+        for i, camel in enumerate(RACING_CAMELS):
+            positions = positions.place_camel(camel, i + 1)
+        board = Board(camel_positions=positions, spectator_tiles={})
+
+        probs = calculate_ranking_probabilities(
+            board=board,
+            remaining_racing_dice=[DieColor.BLUE, DieColor.GREEN, DieColor.RED,
+                                   DieColor.YELLOW, DieColor.PURPLE],
+            grey_die_available=False,
+            depth_limit=2,
+        )
+
+        sum_first = sum(probs.prob_first(c) for c in RACING_CAMELS)
+        assert abs(sum_first - 1.0) < 0.0001
+
+        sum_second = sum(probs.prob_second(c) for c in RACING_CAMELS)
+        assert abs(sum_second - 1.0) < 0.0001
+
+    def test_depth_limited_all_probabilities(self):
+        """calculate_all_probabilities with depth_limit returns valid FullProbabilities."""
+        positions = CamelPositions.create_empty()
+        for i, camel in enumerate(RACING_CAMELS):
+            positions = positions.place_camel(camel, i + 1)
+        board = Board(camel_positions=positions, spectator_tiles={})
+
+        full_probs = calculate_all_probabilities(
+            board=board,
+            remaining_racing_dice=[DieColor.BLUE, DieColor.GREEN, DieColor.RED,
+                                   DieColor.YELLOW, DieColor.PURPLE],
+            grey_die_available=False,
+            depth_limit=2,
+        )
+
+        # Ranking probabilities should be valid
+        for camel in RACING_CAMELS:
+            p_first = full_probs.ranking.prob_first(camel)
+            assert 0 <= p_first <= 1
+
+        # Space landing probabilities should exist
+        assert full_probs.space_landings is not None
+
+        # Overall race probabilities should exist
+        assert full_probs.overall_race is not None
+        for camel in RACING_CAMELS:
+            assert full_probs.overall_race.prob_wins_race(camel) >= 0
 
 
 class TestSimulation:

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from multiprocessing import Pool
 from typing import List
 
-from src.agents import RandomAgent, GreedyAgent, HeuristicAgent, ConservativeAgent
+from src.agents import RandomAgent, GreedyAgent, BoundedGreedyAgent, HeuristicAgent, ConservativeAgent
 from src.game.game import play_game
 from src.simulation.results import GameResult, MatchupResult
 
@@ -15,6 +15,7 @@ from src.simulation.results import GameResult, MatchupResult
 AGENT_REGISTRY = {
     "RandomAgent": lambda seed, fast_mode: RandomAgent(seed=seed),
     "GreedyAgent": lambda seed, fast_mode: GreedyAgent(seed=seed, fast_mode=fast_mode),
+    "BoundedGreedyAgent": lambda seed, fast_mode: BoundedGreedyAgent(seed=seed, fast_mode=fast_mode),
     "HeuristicAgent": lambda seed, fast_mode: HeuristicAgent(seed=seed, fast_mode=fast_mode),
     "ConservativeAgent": lambda seed, fast_mode: ConservativeAgent(seed=seed, fast_mode=fast_mode),
 }

@@ -39,7 +39,8 @@ class GreedyAgent(Agent):
         name: str | None = None,
         seed: int | None = None,
         overall_bet_threshold: float = OVERALL_BET_THRESHOLD,
-        fast_mode: bool = False
+        fast_mode: bool = False,
+        depth_limit: int | None = None
     ):
         """
         Initialize the greedy agent.
@@ -51,10 +52,13 @@ class GreedyAgent(Agent):
                 prob_game_ends exceeds this threshold (default 0.3)
             fast_mode: If True, skip grey die in probability calculations
                 (faster but less accurate). Use for testing.
+            depth_limit: If set, only enumerate the next d dice instead of
+                all remaining. Models bounded lookahead.
         """
         super().__init__(name, seed)
         self.overall_bet_threshold = overall_bet_threshold
         self.fast_mode = fast_mode
+        self.depth_limit = depth_limit
 
     def choose_action(
         self,
@@ -74,7 +78,8 @@ class GreedyAgent(Agent):
         full_probs = calculate_all_probabilities(
             state.board,
             remaining_racing,
-            grey_available
+            grey_available,
+            depth_limit=self.depth_limit
         )
 
         # Get available ticket values

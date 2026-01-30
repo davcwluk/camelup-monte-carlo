@@ -7,6 +7,7 @@ from src.agents import (
     Agent,
     RandomAgent,
     GreedyAgent,
+    BoundedGreedyAgent,
     ConservativeAgent,
     HeuristicAgent,
 )
@@ -124,6 +125,56 @@ class TestGreedyAgent:
             ActionType.TAKE_PYRAMID_TICKET,
             ActionType.PLACE_SPECTATOR_TILE,
         ]
+
+
+class TestBoundedGreedyAgent:
+    """Test BoundedGreedyAgent implementation."""
+
+    def test_bounded_greedy_is_greedy_subclass(self):
+        """BoundedGreedyAgent is a subclass of GreedyAgent."""
+        agent = BoundedGreedyAgent(seed=42, fast_mode=True)
+        assert isinstance(agent, GreedyAgent)
+
+    def test_bounded_greedy_default_depth_limit(self):
+        """BoundedGreedyAgent defaults to depth_limit=2."""
+        agent = BoundedGreedyAgent(seed=42)
+        assert agent.depth_limit == 2
+
+    def test_bounded_greedy_returns_legal_action(self):
+        """BoundedGreedyAgent always returns a legal action."""
+        agent = BoundedGreedyAgent(seed=42, fast_mode=True)
+        state = GameState.create_new_game(2, seed=123)
+
+        legal_actions = state.get_legal_actions()
+        action = agent.choose_action(state, legal_actions)
+        assert action in legal_actions
+
+    def test_bounded_greedy_completes_game(self):
+        """BoundedGreedyAgent can play a complete game."""
+        agents = [
+            BoundedGreedyAgent(seed=1, fast_mode=True),
+            RandomAgent(seed=2),
+        ]
+        final_state, history = play_game(
+            num_players=2,
+            agent_functions=agents,
+            seed=42,
+        )
+        assert final_state.is_game_over
+        assert len(history) > 0
+
+    def test_greedy_with_depth_limit_none_unchanged(self):
+        """GreedyAgent(depth_limit=None) behaves identically to default."""
+        state = GameState.create_new_game(2, seed=42)
+        legal_actions = state.get_legal_actions()
+
+        agent_default = GreedyAgent(seed=0, fast_mode=True)
+        agent_explicit = GreedyAgent(seed=0, fast_mode=True, depth_limit=None)
+
+        action_default = agent_default.choose_action(state, legal_actions)
+        action_explicit = agent_explicit.choose_action(state, legal_actions)
+
+        assert action_default == action_explicit
 
 
 class TestConservativeAgent:
