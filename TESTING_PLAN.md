@@ -2,7 +2,7 @@
 
 This document maps each rule from the Camel Up rulebook to specific test cases to verify the code implementation is correct.
 
-**Last Updated:** 239 tests across 12 test files (Phases 1-4 + pre-Phase 4 validation + game logger)
+**Last Updated:** 281 tests across 13 test files (Phases 1-4 + N-player simulation + pre-Phase 4 validation + game logger)
 
 ---
 

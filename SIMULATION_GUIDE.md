@@ -57,6 +57,7 @@ meaningful skill.
 |-------|----------|-------|
 | `RandomAgent` | Picks a uniformly random legal action each turn | Instant |
 | `GreedyAgent` | Enumerates all possible dice outcomes, calculates EV for every legal action, picks the highest | ~0.35s/turn (fast), ~8s/turn (full) |
+| `BoundedGreedyAgent` | GreedyAgent with depth-limited enumeration (default depth=2, 180 outcomes). Models human cognitive limits | Fast |
 | `HeuristicAgent` | Rule-based: bet on leader if P(1st) > 40%, place tiles early, roll when unsure | Medium |
 | `ConservativeAgent` | Risk-averse: only bets when P > 50%, prefers guaranteed +1 pyramid tickets, never places tiles | Medium |
 
@@ -316,7 +317,7 @@ GreedyAgent matchups are the bottleneck.
 | `num_workers` | int | 1 | 1 = serial; >1 = multiprocessing pool |
 | `progress_interval` | int | 100 | Print progress every N games |
 
-Valid agent names: `RandomAgent`, `GreedyAgent`, `HeuristicAgent`, `ConservativeAgent`.
+Valid agent names: `RandomAgent`, `GreedyAgent`, `BoundedGreedyAgent`, `HeuristicAgent`, `ConservativeAgent`.
 
 ---
 
@@ -746,6 +747,126 @@ qualitative findings.
 ### Compute environment
 
 Results were generated on a 12-core Apple Silicon Mac with PyPy 3.10. Total
-wall-clock time for all 7 matchups: ~57 minutes. A dedicated server or cloud
-instance with more cores could run the full `fast_mode=False` suite in
+wall-clock time for all 7 two-player matchups: ~57 minutes. A dedicated server
+or cloud instance with more cores could run the full `fast_mode=False` suite in
 reasonable time.
+
+---
+
+## 11. N-Player Simulations
+
+### Overview
+
+The N-player framework tests whether skill advantage scales with player count.
+It uses a **focal-vs-field** model: one focal agent vs N-1 identical opponents.
+This is a different statistical framework than the 2-player paired A-vs-B
+comparison, so it uses separate modules.
+
+### Key differences from 2-player
+
+| Feature | 2-Player | N-Player |
+|---------|----------|----------|
+| Analysis model | A vs B paired comparison | Focal vs field |
+| Seat rotation | Even/odd alternation | Game i -> focal in seat i % N |
+| Win rate baseline | 0.50 | 1/N |
+| t-test | Paired t-test (A-B diffs) | One-sample t-test (focal - field_mean diffs) |
+| Runner | `SimulationRunner` | `NPlayerRunner` |
+| Results | `MatchupResult` | `NPlayerMatchupResult` |
+
+### Running N-player simulations
+
+```python
+from src.simulation.n_player_runner import NPlayerRunner
+from src.simulation.n_player_results import save_n_player_results_csv
+from src.simulation.n_player_analysis import summary_text
+
+runner = NPlayerRunner(
+    focal_agent_name="GreedyAgent",
+    field_agent_names=("RandomAgent", "RandomAgent", "RandomAgent"),
+    num_games=1000,
+    base_seed=0,
+    fast_mode=True,
+    num_workers=12,
+    progress_interval=100,
+)
+result = runner.run()
+
+save_n_player_results_csv(result, "results/greedy_vs_3xrandom_4p.csv")
+print(summary_text(result))
+```
+
+### Production script
+
+`run_n_player_simulation.py` runs all 6 N-player matchups (Greedy and
+BoundedGreedy vs Random and Heuristic at 2P/4P/6P):
+
+```bash
+pypy3 run_n_player_simulation.py
+```
+
+### N-player CSV format
+
+Columns are dynamic based on player count:
+```
+game_index,seed,score_0,...,score_{N-1},winner,num_legs,num_turns,agent_seat_0,...,agent_seat_{N-1},focal_seat
+```
+
+`load_n_player_results_csv()` auto-detects N from the number of `score_*` columns.
+
+### N-player analysis functions
+
+All in `src.simulation.n_player_analysis`, taking `NPlayerMatchupResult`:
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `focal_wins(r)` | int | Games won by focal agent |
+| `focal_losses(r)` | int | Games lost by focal agent |
+| `tie_count(r)` | int | Tied games |
+| `focal_win_rate_with_ci(r)` | (rate, lo, hi) | 95% Wald CI, ties excluded |
+| `baseline_win_rate(r)` | float | 1/N (no-skill baseline) |
+| `focal_mean_score(r)` | float | Focal agent's mean score |
+| `field_mean_score(r)` | float | Mean of all non-focal scores |
+| `mean_score_advantage(r)` | float | focal - field mean |
+| `focal_score_std_dev(r)` | float | Bessel's correction |
+| `focal_coefficient_of_variation(r)` | float | std/mean |
+| `t_test_focal_vs_field(r)` | (t, p) | One-sample t on per-game diffs |
+| `seat_win_rates(r)` | Tuple[float,...] | Win rate per seat position |
+| `summary_text(r)` | str | Human-readable summary |
+
+### N-player results
+
+#### Greedy vs Random (skill does NOT decay with player count)
+
+| Players | Win Rate | Baseline (1/N) | WR / Baseline | Score Advantage |
+|---------|----------|----------------|---------------|-----------------|
+| 2P | 0.998 | 0.500 | 2.0x | +61.12 |
+| 4P | 0.981 | 0.250 | 3.9x | +38.34 |
+| 6P | 0.963 | 0.167 | 5.8x | +30.32 |
+
+#### Greedy vs Heuristic
+
+| Players | Win Rate | Baseline (1/N) | WR / Baseline | Score Advantage |
+|---------|----------|----------------|---------------|-----------------|
+| 2P | 0.863 | 0.500 | 1.7x | +11.49 |
+| 4P | 0.871 | 0.250 | 3.5x | +12.02 |
+| 6P | 0.829 | 0.167 | 5.0x | +10.30 |
+
+#### BoundedGreedy vs Heuristic (bounded rationality)
+
+| Players | Win Rate | Baseline (1/N) | WR / Baseline | Score Advantage |
+|---------|----------|----------------|---------------|-----------------|
+| 2P | 0.879 | 0.500 | 1.8x | +13.11 |
+| 4P | 0.862 | 0.250 | 3.4x | +11.26 |
+| 6P | 0.756 | 0.167 | 4.5x | +8.74 |
+
+#### Key findings
+
+- **Skill does NOT decay toward 1/N.** Relative to baseline, GreedyAgent's
+  advantage actually increases with more players (2.0x at 2P to 5.8x at 6P vs
+  Random). More weak opponents = more value to extract.
+- **Bounded rationality effect at 6P.** BoundedGreedy (depth=2) matches
+  FullGreedy at 2P/4P but drops 7.3pp at 6P (75.6% vs 82.9%). Shallow
+  calculation loses resolution when many opponents create noise.
+- **Skill still dominant.** Even depth-limited BoundedGreedy wins 4.5x baseline
+  at 6P. Probability calculation provides a commanding advantage at all player
+  counts.

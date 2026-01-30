@@ -96,6 +96,12 @@ To interpret results, we compare against known reference points:
   - Avoid overall winner/loser bets unless very confident
 - **Purpose**: Test low-variance strategy
 
+### 6. BoundedGreedyAgent
+- **Logic**: GreedyAgent with depth-limited probability calculation
+  - Only enumerates next `depth_limit` dice outcomes (default 2)
+  - 180 outcomes at depth=2 vs 29,160 for full enumeration
+- **Purpose**: Model human cognitive limits ("bounded rationality")
+
 ---
 
 ## Metrics to Track
@@ -163,6 +169,12 @@ To interpret results, we compare against known reference points:
 - [x] Progress tracking with flush for background runs
 - [x] Production results: 7 matchups x 1,000 games (fast_mode=True)
 - [x] Simulation guide document (SIMULATION_GUIDE.md)
+- [x] BoundedGreedyAgent: depth-limited GreedyAgent (default depth=2, 180 outcomes)
+- [x] N-player simulation: NPlayerRunner, NPlayerMatchupResult, focal-vs-field analysis
+- [x] N-player seat rotation (game i -> focal in seat i % N)
+- [x] N-player CSV I/O with dynamic columns (auto-detects N on load)
+- [x] Production N-player results: 9 matchups x 1,000 games (2P/4P/6P, Greedy/BoundedGreedy vs Random/Heuristic)
+- [x] Multi-player scaling experiments confirming skill does NOT decay toward 1/N
 
 ### Phase 5: Analysis and Visualization
 - [ ] Win rate calculations and confidence intervals
@@ -175,7 +187,7 @@ To interpret results, we compare against known reference points:
 - [ ] Track Sharpe Ratio equivalent metric (Mean Excess Return / Std Dev)
 - [ ] Parameter sensitivity analysis for HeuristicAgent thresholds
 - [ ] Implement GameAwareGreedyAgent (score differential utility)
-- [ ] Multi-player scaling experiments (4, 6 players) for Skill Decay Curve
+- [x] Multi-player scaling experiments (4, 6 players) for Skill Decay Curve
 
 ---
 
@@ -236,6 +248,7 @@ camelup/
 │   │   ├── greedy_agent.py
 │   │   ├── heuristic_agent.py
 │   │   ├── optimal_agent.py
+│   │   ├── bounded_greedy_agent.py
 │   │   └── conservative_agent.py
 │   ├── logging/
 │   │   ├── __init__.py
@@ -245,7 +258,10 @@ camelup/
 │       ├── __init__.py
 │       ├── results.py        # GameResult, MatchupResult, CSV I/O
 │       ├── runner.py         # SimulationRunner, agent registry, worker
-│       └── analysis.py       # Win rate, CI, t-test, CV, summary
+│       ├── analysis.py       # Win rate, CI, t-test, CV, summary
+│       ├── n_player_results.py  # NPlayerMatchupResult, CSV I/O
+│       ├── n_player_runner.py   # NPlayerRunner, seat rotation
+│       └── n_player_analysis.py # Focal-vs-field analysis
 ├── tests/
 │   ├── __init__.py
 │   ├── test_dice.py           # 12 tests - dice and pyramid mechanics
@@ -259,7 +275,8 @@ camelup/
 │   ├── test_agents.py         # 23 tests - agent implementations (1 marked slow)
 │   ├── test_probability_validation.py  # 10 tests - Monte Carlo validation (2 marked slow)
 │   ├── test_game_logger.py    # 13 tests - renderer + logger integration
-│   └── test_simulation.py     # 33 tests - simulation framework
+│   ├── test_simulation.py     # 33 tests - simulation framework
+│   └── test_n_player_simulation.py  # 30 tests - N-player simulation
 ├── notebooks/
 │   └── analysis.ipynb        # Results visualization
 └── results/
@@ -272,7 +289,7 @@ camelup/
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
-| Number of players | 2 | Simplifies analysis, clearer skill signal |
+| Number of players | 2, 4, 6 | 2P for paired analysis, 4P/6P for skill decay experiments |
 | Games per matchup | Adaptive N (start 1,000; scale up if 95% CI > +/-1%) | See question.md Q4 |
 | Random seed | Fixed for reproducibility | Reproducibility |
 | Track length | 16 spaces (standard) | Per rulebook |
@@ -322,10 +339,10 @@ Note: OptimalAgent was deferred -- GreedyAgent serves as the EV-optimal agent.
 | Phase 2 | Probability Calculator | Complete (25 tests) |
 | Phase 3 | Agent Implementation | Complete (23 tests) |
 | Pre-Phase 4 | Validation and Performance | Complete (8 tests) |
-| Phase 4 | Simulation Framework | Complete (33 tests, 7 matchups run) |
+| Phase 4 | Simulation Framework | Complete (63 tests, 7 two-player + 9 N-player matchups run) |
 | Phase 5 | Analysis and Visualization | Not Started |
 
-**Total: 239 tests (3 marked slow)**
+**Total: 281 tests (3 marked slow)**
 
 ---
 
